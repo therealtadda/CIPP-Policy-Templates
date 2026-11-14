@@ -6,6 +6,11 @@ cloud-only Entra-joined Windows access, and Intune app-protected mobile access.
 tenant. Enforced pilot and production readiness are blocked pending separately
 authorized tenant verification.**
 
+To connect an existing CIPP instance, start with [Using this repository with
+CIPP](#using-this-repository-with-cipp). For tenant prerequisites, pilot acceptance
+criteria, and rollback, read the [deployment runbook](docs/deployment-runbook.md)
+before deploying anything.
+
 ## Policy inventory
 
 | Policy | Users | Resources / conditions | Requirement |
@@ -112,35 +117,159 @@ decision, and compensating controls. Review service/device/resource users
 individually; do not blanket-exclude service users. Service principals and
 workload-identity policies are outside this user-policy baseline.
 
-## CIPP import and packages
+## Using this repository with CIPP
 
-1. Review the pinned evidence below against the installed CIPP build. Use **CA
-   Templates > Browse Catalog > Community Catalog** if your repository and its
-   intended branch are configured/available there. This repository's presence in
-   GitHub does not automatically register it in the community catalog. For the
-   `Preview` output, select/configure that branch explicitly rather than assuming
-   the catalog reads it instead of `main`.
-2. Preview the JSON, import CA-001 through CA-005 and optionally CA-006 into CIPP's
-   template store, and inspect them in the template editor. Where catalog access
-   is unavailable, use **Create CA Template** to reproduce the provided fields,
-   save, and compare the resulting export. Do not assume a generic JSON upload UI
-   exists on every CIPP version.
-3. Optionally select the five baseline templates and **Add to package**, using an
-   operator-chosen package name. Keep CA-006 separate until compatibility is
-   approved. Package membership is CIPP metadata, not a JSON wrapper here, and a
-   package is not a native Entra policy plan.
-4. Follow the runbook before any deployment. Use **Replace by display name**;
-   leave automatic group creation off, prevalidate names and IDs, retain
-   Report-only, and target one explicitly authorized tenant first. **Never use
-   "Remove all exclusions, apply to all users".** Do not select All tenants.
-5. Export the resulting effective tenant policies and compare resolved IDs,
-   conditions, controls, and state. A successful import or local check does not
-   prove an effective deployment is correct.
+These are operator instructions for an existing CIPP instance, not a script that
+installs CIPP or deploys policies. Page labels can vary by CIPP version; use the
+linked CIPP documentation and verify the installed build against the format
+evidence below.
 
-CIPP standards overwrite local tenant edits on drift remediation. Keep exceptions
-in the template/List-variable source of truth; manual Entra exclusions are not
-durable. Review repository sync, package membership, overwrites, and standards
-ownership before redeployment or native migration.
+| Connection setting | Value |
+| --- | --- |
+| GitHub repository | `therealtadda/CIPP-Policy-Templates` |
+| Repository URL | `https://github.com/therealtadda/CIPP-Policy-Templates` |
+| Branch containing this preview baseline | `Preview` (case-sensitive) |
+| Template folder / type | `CATemplate` / Conditional Access |
+| Baseline templates | CA-001 through CA-005 |
+| Conditional template | CA-006, only after external compatibility is approved |
+
+### 1. Register the repository as a template source
+
+1. Sign in to CIPP with access to **Tools > Catalog**. Catalog browsing/import
+   requires the `CIPP.TemplateLibrary` permission; configuring a scheduled
+   Template Library also requires the applicable Scheduler permission.
+2. Select **Add Source**, not **Create Repository**: this GitHub repository
+   already exists.
+3. Enter `therealtadda/CIPP-Policy-Templates` in **GitHub repository URL or
+   owner/repo**. CIPP also accepts the repository URL above.
+4. CIPP detects template types from its recognized folder names. If a type must
+   be selected manually, choose Conditional Access (`CATemplate`). Save the source
+   and confirm its card appears.
+
+Public repository browsing/import does not normally need your own GitHub token.
+For a private fork, configure and test the [CIPP GitHub
+integration](https://docs.cipp.app/user-documentation/cipp/integrations/github)
+with access to that repository first. Store credentials only in CIPP's secure
+integration settings, never in policy JSON or this repository. Publishing back
+to GitHub is not required to consume these templates.
+
+### 2. Select the branch and bring templates into CIPP
+
+**Do not assume the default `main` branch contains the preview templates.**
+CIPP's source-card **Set Upload Branch** action controls publishing to GitHub,
+not the branch used to read/import templates.
+
+For an explicitly selected source branch, use the documented
+[Template Library](https://docs.cipp.app/user-documentation/tools/templatelib)
+workflow:
+
+1. Open **Tools > Template Library** and choose **Community Repository**, then
+   select `therealtadda/CIPP-Policy-Templates`.
+2. Under **Repository Branch > Select Branch**, choose **Preview**.
+3. Review the sync warning before selecting **Submit**. A repository library
+   imports every template on the selected branch, including optional CA-006.
+   Importing it into the template store is not permission to deploy it.
+4. Inspect the configured library and its task in **Scheduler**. Current CIPP
+   documentation specifies a seven-day repository sync schedule; do not assume
+   saving means the first import has already completed. Check task results and
+   the CA Templates page to confirm the sync succeeded.
+5. If a library for this repository already exists, review/edit its task through
+   Scheduler rather than creating a duplicate. Confirm its configured branch
+   remains `Preview`.
+
+**Sync can overwrite stored templates with the same name.** Review existing
+templates, standards assignments, and remediation before enabling it: changing a
+stored template can affect tenants when an attached standard subsequently runs.
+A library sync itself is not a request to deploy these policies to all tenants,
+even if its Scheduler entry shows **All Tenants**.
+
+For a one-time, selective import, use **Tools > Catalog**, open the source card,
+or use **CA Templates > Browse Catalog > Community Catalog**. Preview the JSON
+and import CA-001 through CA-005; leave CA-006 unselected unless needed. Confirm
+that the displayed source branch actually contains the `Preview` files. If the
+installed catalog only reads the default branch and offers no read-branch
+selection, use the Template Library branch selector above instead; changing the
+upload branch will not fix this.
+
+After import, open **Tenant Administration > Conditional Access > CA Templates**
+and confirm the expected names, variable tokens, and Report-only state. Where
+catalog/library import is unavailable, **Create CA Template** can reproduce the
+fields from each JSON file; save and compare the export. Do not assume every
+version offers a generic JSON file-upload control.
+
+### 3. Configure each tenant's references
+
+1. Open CIPP [Global
+   Variables](https://docs.cipp.app/user-documentation/tenant/administration/tenants/global-variables)
+   and create the eight variables in the table above with type **List**. Enter
+   names without the surrounding `%` characters.
+2. Give optional Lists the value `[]`. Leave `caexternalcompatibility` empty
+   until the paired CA-001/006 transition in the runbook is approved.
+3. In the target tenant's **Edit Tenant > Custom Variables**, set tenant-specific
+   overrides. `caemergencyusers` must contain explicit, tested emergency user
+   display names. Other Lists contain precreated group display names, one per
+   entry, not user names.
+4. Verify each name resolves uniquely to the intended tenant-local object, review
+   group membership, and confirm the emergency set is nonempty. An undefined
+   token is not an empty List. Stop on unresolved/ambiguous names.
+5. Complete licensing, authentication-method, APP/broker, existing-policy, and
+   recovery checks in the [runbook](docs/deployment-runbook.md). CA does not create
+   the required Intune app protection policies.
+
+### 4. Package and deploy only when authorized
+
+Optionally select CA-001 through CA-005 on **CA Templates**, then **Add to
+package** with a name such as `CA Baseline - Preview`. Keep CA-006 outside the
+baseline package until compatibility is approved. Package membership is CIPP
+metadata, not a JSON wrapper, and a CIPP package is not an Entra policy plan.
+
+For separately authorized deployment, use **Deploy Template** and review:
+
+| Deployment option | Required choice / review |
+| --- | --- |
+| Tenant | One explicitly authorized test tenant, never All tenants for the initial review |
+| Policy state | Report-only (`enabledForReportingButNotEnforced`) |
+| User/group handling | **Replace by display name**, with independently verified names/IDs |
+| Group creation | Off; use reviewed, precreated groups |
+| Exclusion handling | Retain emergency and control-specific exclusions; **never "Remove all exclusions, apply to all users"** |
+| Overwrite existing policy | Leave off for a first deployment; enable only for a reviewed update after exporting the existing policy and checking ownership |
+| Security Defaults | Do not disable as a shortcut; preserve protection until an approved replacement set is ready |
+
+All users targeting in these source templates is intentional. A constrained
+enforced pilot needs separately reviewed tenant-local pilot copies/scopes; do
+not switch the reusable All users package directly to On.
+
+### 5. Verify, maintain, and troubleshoot
+
+Export effective tenant policies after deployment and compare resolved user/group
+IDs, built-in strength IDs, external categories, Windows filter, Office 365 APP
+scope, controls, exclusions, and state against the [runbook's round-trip
+checklist](docs/deployment-runbook.md#3-cipp-round-trip-and-report-only-review).
+Use What If and relevant sign-in logs for initial analysis. Import success and
+Report-only results do not replace an authorized enforced pilot, particularly
+for APP and broker/device interactions.
+
+| Symptom | Check before continuing |
+| --- | --- |
+| Source cannot be added | Repository spelling, visibility, GitHub integration access for private repositories, and CIPP permissions |
+| Source shows no templates | Read branch is `Preview`, `CATemplate` folder exists on that branch, catalog warnings, and installed CIPP capability; do not change the upload branch to fix reads |
+| Library saved but templates missing | Scheduler task state/results and selected source branch; a scheduled sync may not have run yet |
+| Deployment reports an unresolved variable/name | All eight Lists exist, tenant overrides are correct, display names are unique, and emergency references resolve |
+| CA-006 has no target users/groups | Keep it undeployed while compatibility is unused; do not broaden it to All users |
+| A local change disappears | Repository sync or standards remediation restored the source; change the intended source of truth instead |
+
+CIPP standards overwrite tenant edits on drift remediation. Keep exceptions in
+the template/List-variable source of truth; manual Entra exclusions are not
+durable. Clone a repository-synced template in CIPP when a separately owned,
+editable working copy is needed, and document which version owns deployment.
+Review updates before re-importing or enabling **Force re-import**, which can
+discard local template edits. Do not attach these Report-only preview sources to
+production remediation without a reviewed state/ownership strategy.
+
+For broader enablement, rollback, and native-plan ownership handoff, follow the
+[deployment runbook](docs/deployment-runbook.md) and [native policy-plan
+design](docs/native-policy-plans.md). No tenant deployment or production approval
+is implied by following the repository connection/import steps.
 
 ## Prerequisites and boundaries
 
