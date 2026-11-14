@@ -1,0 +1,46 @@
+{
+  "@odata.type": "#microsoft.graph.conditionalAccessPolicy",
+  "displayName": "CA-003 - Windows - Block non-Entra-joined devices",
+  "state": "enabledForReportingButNotEnforced",
+  "conditions": {
+    "signInRiskLevels": [],
+    "userRiskLevels": [],
+    "servicePrincipalRiskLevels": [],
+    "users": {
+      "includeUsers": ["All"],
+      "excludeUsers": ["%caemergencyusers%"],
+      "includeGroups": [],
+      "excludeGroups": ["%cawindowsexceptions%"],
+      "includeRoles": [],
+      "excludeRoles": [],
+      "excludeGuestsOrExternalUsers": {
+        "guestOrExternalUserTypes": "internalGuest,b2bCollaborationGuest,b2bCollaborationMember,b2bDirectConnectUser,otherExternalUser,serviceProvider",
+        "externalTenants": {
+          "@odata.type": "#microsoft.graph.conditionalAccessAllExternalTenants",
+          "membershipKind": "all"
+        }
+      }
+    },
+    "applications": {
+      "includeApplications": ["All"],
+      "excludeApplications": [],
+      "includeUserActions": [],
+      "includeAuthenticationContextClassReferences": []
+    },
+    "clientAppTypes": ["all"],
+    "platforms": {
+      "includePlatforms": ["windows"],
+      "excludePlatforms": []
+    },
+    "devices": {
+      "deviceFilter": {
+        "mode": "exclude",
+        "rule": "(device.trustType -eq \"AzureAD\") -and (device.operatingSystem -eq \"Windows\")"
+      }
+    }
+  },
+  "grantControls": {
+    "operator": "AND",
+    "builtInControls": ["block"]
+  }
+}

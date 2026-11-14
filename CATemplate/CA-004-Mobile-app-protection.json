@@ -1,0 +1,40 @@
+{
+  "@odata.type": "#microsoft.graph.conditionalAccessPolicy",
+  "displayName": "CA-004 - Mobile - Require app protection",
+  "state": "enabledForReportingButNotEnforced",
+  "conditions": {
+    "signInRiskLevels": [],
+    "userRiskLevels": [],
+    "servicePrincipalRiskLevels": [],
+    "users": {
+      "includeUsers": ["All"],
+      "excludeUsers": ["%caemergencyusers%"],
+      "includeGroups": [],
+      "excludeGroups": ["%camobileexceptions%"],
+      "includeRoles": [],
+      "excludeRoles": [],
+      "excludeGuestsOrExternalUsers": {
+        "guestOrExternalUserTypes": "internalGuest,b2bCollaborationGuest,b2bCollaborationMember,b2bDirectConnectUser,otherExternalUser,serviceProvider",
+        "externalTenants": {
+          "@odata.type": "#microsoft.graph.conditionalAccessAllExternalTenants",
+          "membershipKind": "all"
+        }
+      }
+    },
+    "applications": {
+      "includeApplications": ["Office365"],
+      "excludeApplications": [],
+      "includeUserActions": [],
+      "includeAuthenticationContextClassReferences": []
+    },
+    "clientAppTypes": ["browser", "mobileAppsAndDesktopClients"],
+    "platforms": {
+      "includePlatforms": ["iOS", "android"],
+      "excludePlatforms": []
+    }
+  },
+  "grantControls": {
+    "operator": "AND",
+    "builtInControls": ["compliantApplication"]
+  }
+}
