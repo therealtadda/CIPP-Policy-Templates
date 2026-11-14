@@ -1,0 +1,34 @@
+{
+  "@odata.type": "#microsoft.graph.conditionalAccessPolicy",
+  "displayName": "CA-001 - Baseline - Require MFA strength",
+  "state": "enabledForReportingButNotEnforced",
+  "conditions": {
+    "signInRiskLevels": [],
+    "userRiskLevels": [],
+    "servicePrincipalRiskLevels": [],
+    "users": {
+      "includeUsers": ["All"],
+      "excludeUsers": ["%caemergencyusers%"],
+      "includeGroups": [],
+      "excludeGroups": ["%camfaexceptions%", "%caexternalcompatibility%"],
+      "includeRoles": [],
+      "excludeRoles": []
+    },
+    "applications": {
+      "includeApplications": ["All"],
+      "excludeApplications": [],
+      "includeUserActions": [],
+      "includeAuthenticationContextClassReferences": []
+    },
+    "clientAppTypes": ["all"]
+  },
+  "grantControls": {
+    "operator": "AND",
+    "builtInControls": [],
+    "authenticationStrength": {
+      "id": "00000000-0000-0000-0000-000000000002",
+      "displayName": "Multifactor authentication",
+      "policyType": "builtIn"
+    }
+  }
+}

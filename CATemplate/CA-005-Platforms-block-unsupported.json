@@ -1,0 +1,40 @@
+{
+  "@odata.type": "#microsoft.graph.conditionalAccessPolicy",
+  "displayName": "CA-005 - Platforms - Block unsupported platforms",
+  "state": "enabledForReportingButNotEnforced",
+  "conditions": {
+    "signInRiskLevels": [],
+    "userRiskLevels": [],
+    "servicePrincipalRiskLevels": [],
+    "users": {
+      "includeUsers": ["All"],
+      "excludeUsers": ["%caemergencyusers%"],
+      "includeGroups": [],
+      "excludeGroups": ["%caplatformexceptions%"],
+      "includeRoles": [],
+      "excludeRoles": [],
+      "excludeGuestsOrExternalUsers": {
+        "guestOrExternalUserTypes": "internalGuest,b2bCollaborationGuest,b2bCollaborationMember,b2bDirectConnectUser,otherExternalUser,serviceProvider",
+        "externalTenants": {
+          "@odata.type": "#microsoft.graph.conditionalAccessAllExternalTenants",
+          "membershipKind": "all"
+        }
+      }
+    },
+    "applications": {
+      "includeApplications": ["All"],
+      "excludeApplications": [],
+      "includeUserActions": [],
+      "includeAuthenticationContextClassReferences": []
+    },
+    "clientAppTypes": ["all"],
+    "platforms": {
+      "includePlatforms": ["all"],
+      "excludePlatforms": ["windows", "iOS", "android"]
+    }
+  },
+  "grantControls": {
+    "operator": "AND",
+    "builtInControls": ["block"]
+  }
+}
