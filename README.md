@@ -2,9 +2,12 @@
 
 Reusable, CIPP-first Conditional Access templates for authentication assurance,
 cloud-only Entra-joined Windows access, and Intune app-protected mobile access.
-**Every template defaults to Report-only. Nothing in this repository deploys to a
-tenant. Enforced pilot and production readiness are blocked pending separately
-authorized tenant verification.**
+**Every Conditional Access template defaults to Report-only. No tenant deployment
+has been performed. Enforced pilot and production readiness are blocked pending
+separately authorized tenant verification.** The optional [standalone
+authentication-strength runner](docs/authentication-strengths.md) can create a
+strength through an authenticated CIPP backend session only with explicit
+`-Apply`; it does not deploy or assign CA policies.
 
 To connect an existing CIPP instance, start with [Using this repository with
 CIPP](#using-this-repository-with-cipp). For tenant prerequisites, pilot acceptance
@@ -60,6 +63,30 @@ references, independent exceptions, and the CA-001/006 reference pairing.
 Regression tests mutate these properties and require rejection. This is not a
 complete Microsoft Graph schema validator, CIPP integration test, or simulation
 of real token evaluation.
+
+### Standalone authentication strength (optional)
+
+`AuthenticationStrength\AS-001-Authenticator-WHfB-TAP.json` allows Microsoft
+Authenticator Android/iOS passkeys only (AAGUID-restricted), Windows Hello for
+Business, and one-time/multi-use Temporary Access Passes. It is
+**bootstrap/recovery-capable, not phishing-resistant-only**, and does not replace
+CA-002. This directory is not a standalone CIPP catalog template type.
+
+`scripts\Invoke-CIPPAuthenticationStrength.ps1` inspects or creates the definition
+in one explicitly authorized tenant using CIPP's backend Graph helpers.
+Read-only is the default; creation requires `-Apply`, reuses only an exact match,
+and stops on drift. It never updates/deletes existing strengths, enables methods,
+issues TAPs, or creates/assigns CA policies. CIPP Custom Tests cannot execute this
+write runner. See the [backend prerequisites, usage, and safety
+boundaries](docs/authentication-strengths.md) before use.
+
+Run its dependency-free offline tests locally:
+
+```powershell
+.\tests\Test-CIPPAuthenticationStrength.Tests.ps1
+```
+
+### Optional offline CA variable map
 
 An optional **private, outside-this-repository** JSON file can map each variable
 name below (without `%`) to a JSON array of tenant-local display names:
