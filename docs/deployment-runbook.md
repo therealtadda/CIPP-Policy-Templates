@@ -45,9 +45,28 @@ Lists. Empty optional Lists must be `[]`, not a blank string or an undefined
 variable. Set the compatibility List empty by default. Import CA-006 only when
 needed and do not deploy it with no effective inclusions.
 
-Run the local validator and regression tests. Optionally validate a private
-variable map with `-VariablesPath`. That map is an offline review input; this
-repository does not upload it into CIPP.
+Run the local validator, regression tests, and catalog reader. The catalog
+reader validates the versioned manifest, digests, deterministic selections, and
+source-template variable metadata before returning raw CIPP template objects.
+Optionally validate a private variable map with `-VariablesPath`. That map is an
+offline review input; this repository does not upload it into CIPP.
+
+```powershell
+.\scripts\Test-CABaseline.ps1
+.\scripts\Get-CIPPCatalog.ps1 `
+  -SourceRevision (git rev-parse HEAD) `
+  -SelectionSet baseline-core `
+  -AsJson
+.\tests\Test-CABaseline.Tests.ps1
+.\tests\Get-CIPPCatalog.Tests.ps1
+```
+
+The supported CIPP Template Library workflow is branch-based, not commit-pinned.
+Use a protected, reviewed release branch and record the approved commit in the
+tenant-private change record. Template Library follows the branch and syncs
+every seven days, so review branch updates before they are published. The local
+catalog reader can pin and audit an immutable commit for release preparation,
+but CIPP Template Library does not consume that reader or the manifest.
 
 Before *any* deployment, resolve every referenced name against the target tenant
 and record exactly one object ID per name, correct object type, and reviewed
@@ -57,12 +76,12 @@ proceed based only on a successful script exit. Reject groups reused for differe
 control purposes and inspect overlapping membership rather than assuming distinct
 names imply distinct populations.
 
-Use **Replace by display name**, with automatic group creation disabled. Current
-CIPP code has different name-resolution branches; do not assume every installed
-build fails closed for every missing name merely because the docs describe
-strict resolution. Prevalidate independently and stop before deployment if a
-mandatory name cannot resolve. **Never select "Remove all exclusions, apply to
-all users".** Do not strip emergency exclusions to fix an import error.
+Use **Replace by display name**, with automatic group creation disabled. With
+that option, prevalidate every mandatory name independently and stop before
+deployment if it cannot resolve uniquely. CIPP documents that a missing group
+fails deployment when group creation is off. **Never select "Remove all
+exclusions, apply to all users".** Do not strip emergency exclusions to fix an
+import error.
 
 Authentication-strength IDs are portable built-in IDs, not customer IDs:
 
@@ -105,9 +124,20 @@ immediately reflect a role or membership change.
 
 ## 3. CIPP round-trip and Report-only review
 
-Use the README's catalog/editor and package workflow. Inspect each imported
-template, then deploy only under separate authorization to an explicitly selected
-test tenant, retaining **Report-only** and all required exclusions.
+Use the README's Template Library and CA Policies workflow. After selecting the
+reviewed release branch and waiting for or running the scheduled sync, inspect
+the imported templates in CIPP. Create or update only under separate
+authorization to one explicitly selected test tenant. In the deployment drawer,
+choose **Replace by display name**, disable automatic group creation and
+overwrite unless explicitly approved, retain every exclusion, and set the initial
+policy state to **Disabled**. The manifest and catalog reader are not inputs to
+the built-in Template Library and must not be treated as Graph payloads.
+
+After deployment, re-read the tenant policy and confirm identity, disabled state,
+resolved scope, exclusions, controls, source change record, and ownership. Only
+then use a separate explicitly authorized edit/deployment operation to set that
+exact policy to **Report-only**. No create/update step may enable Report-only or
+enforcement implicitly.
 
 Export both CIPP templates and resulting effective Entra policies. Compare
 semantic content, not formatting or server-added read-only fields:

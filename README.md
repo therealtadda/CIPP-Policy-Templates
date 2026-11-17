@@ -51,6 +51,8 @@ Run with PowerShell 7 or later, from this checkout:
 ```powershell
 .\scripts\Test-CABaseline.ps1
 .\tests\Test-CABaseline.Tests.ps1
+.\scripts\Get-CIPPCatalog.ps1 -SourceRevision (git rev-parse HEAD) -AsJson
+.\tests\Get-CIPPCatalog.Tests.ps1
 ```
 
 There are no package dependencies, tenant calls, or deployment commands in these
@@ -60,6 +62,37 @@ references, independent exceptions, and the CA-001/006 reference pairing.
 Regression tests mutate these properties and require rejection. This is not a
 complete Microsoft Graph schema validator, CIPP integration test, or simulation
 of real token evaluation.
+
+`cipp-policy-manifest.json` is the machine-readable discovery and compatibility
+contract. `Get-CIPPCatalog.ps1` validates it against the raw files and then emits
+policies in deterministic ID order. It can select a reviewed subset, embed the
+raw CIPP source-template objects, and validate a private variable map without
+performing tenant operations:
+
+```powershell
+.\scripts\Get-CIPPCatalog.ps1 `
+  -SourceRevision (git rev-parse HEAD) `
+  -SelectionSet baseline-core `
+  -AsJson
+.\scripts\Get-CIPPCatalog.ps1 `
+  -SourceRevision (git rev-parse HEAD) `
+  -SelectionSet external-compatibility `
+  -IncludeSourceTemplate `
+  -VariablesPath 'C:\private\ca-variables.json' `
+  -CompatibilityCoverageVerified `
+  -AsJson
+```
+
+The optional reader's revision argument is mandatory provenance for readers that
+use this manifest contract. CIPP's built-in Template Library instead follows a
+selected branch; it does not invoke this reader or consume the manifest. All
+workflows must reject unsupported source content, must not treat the embedded
+source template as a Graph request body, and must create/update the tenant policy
+in `disabled` state followed by a separate explicit Report-only activation step.
+Preserve explicit authorization, unique-reference, and compatibility-pair gates.
+See the [CIPP integration contract](docs/cipp-integration-contract.md) for the
+built-in CIPP workflow, optional reader semantics, stable errors, and
+sibling-repository boundary.
 
 An optional **private, outside-this-repository** JSON file can map each variable
 name below (without `%`) to a JSON array of tenant-local display names:
@@ -128,7 +161,7 @@ evidence below.
 | --- | --- |
 | GitHub repository | `therealtadda/CIPP-Policy-Templates` |
 | Repository URL | `https://github.com/therealtadda/CIPP-Policy-Templates` |
-| Branch containing this preview baseline | `Preview` (case-sensitive) |
+| Branch containing reviewed templates | The reviewed release branch selected by the operator (case-sensitive) |
 | Template folder / type | `CATemplate` / Conditional Access |
 | Baseline templates | CA-001 through CA-005 |
 | Conditional template | CA-006, only after external compatibility is approved |
@@ -155,7 +188,7 @@ to GitHub is not required to consume these templates.
 
 ### 2. Select the branch and bring templates into CIPP
 
-**Do not assume the default `main` branch contains the preview templates.**
+**Do not assume the default `main` branch is the reviewed release branch.**
 CIPP's source-card **Set Upload Branch** action controls publishing to GitHub,
 not the branch used to read/import templates.
 
@@ -165,7 +198,10 @@ workflow:
 
 1. Open **Tools > Template Library** and choose **Community Repository**, then
    select `therealtadda/CIPP-Policy-Templates`.
-2. Under **Repository Branch > Select Branch**, choose **Preview**.
+2. Under **Repository Branch > Select Branch**, choose the reviewed release
+   branch. The source is reviewed branch configuration, not an immutable commit
+   pin. Protect the branch and record the reviewed commit in the private change
+   record.
 3. Review the sync warning before selecting **Submit**. A repository library
    imports every template on the selected branch, including optional CA-006.
    Importing it into the template store is not permission to deploy it.
@@ -175,7 +211,7 @@ workflow:
    the CA Templates page to confirm the sync succeeded.
 5. If a library for this repository already exists, review/edit its task through
    Scheduler rather than creating a duplicate. Confirm its configured branch
-   remains `Preview`.
+   remains the reviewed release branch.
 
 **Sync can overwrite stored templates with the same name.** Review existing
 templates, standards assignments, and remediation before enabling it: changing a
@@ -185,11 +221,10 @@ even if its Scheduler entry shows **All Tenants**.
 
 For a one-time, selective import, use **Tools > Catalog**, open the source card,
 or use **CA Templates > Browse Catalog > Community Catalog**. Preview the JSON
-and import CA-001 through CA-005; leave CA-006 unselected unless needed. Confirm
-that the displayed source branch actually contains the `Preview` files. If the
-installed catalog only reads the default branch and offers no read-branch
-selection, use the Template Library branch selector above instead; changing the
-upload branch will not fix this.
+and import CA-001 through CA-005; leave CA-006 unselected unless needed. A
+Template Library is the approved workflow here because it exposes the branch
+selector and imports every template file on that branch; changing the upload
+branch is unrelated to selecting the read branch.
 
 After import, open **Tenant Administration > Conditional Access > CA Templates**
 and confirm the expected names, variable tokens, and Report-only state. Where
@@ -228,7 +263,7 @@ For separately authorized deployment, use **Deploy Template** and review:
 | Deployment option | Required choice / review |
 | --- | --- |
 | Tenant | One explicitly authorized test tenant, never All tenants for the initial review |
-| Policy state | Report-only (`enabledForReportingButNotEnforced`) |
+| Initial policy state | **Disabled** for create/update; do not leave the template's default Report-only unchanged |
 | User/group handling | **Replace by display name**, with independently verified names/IDs |
 | Group creation | Off; use reviewed, precreated groups |
 | Exclusion handling | Retain emergency and control-specific exclusions; **never "Remove all exclusions, apply to all users"** |
@@ -238,6 +273,13 @@ For separately authorized deployment, use **Deploy Template** and review:
 All users targeting in these source templates is intentional. A constrained
 enforced pilot needs separately reviewed tenant-local pilot copies/scopes; do
 not switch the reusable All users package directly to On.
+
+After CIPP creates or updates the policy, re-read and verify it is disabled and
+matches the reviewed source after tenant-local substitution. In a separate,
+explicitly authorized operation, edit that exact policy to **Report-only**
+(`enabledForReportingButNotEnforced`). Do not combine create/update and
+activation. Use the [runbook](docs/deployment-runbook.md) before any later
+enforced pilot.
 
 ### 5. Verify, maintain, and troubleshoot
 
@@ -252,7 +294,7 @@ for APP and broker/device interactions.
 | Symptom | Check before continuing |
 | --- | --- |
 | Source cannot be added | Repository spelling, visibility, GitHub integration access for private repositories, and CIPP permissions |
-| Source shows no templates | Read branch is `Preview`, `CATemplate` folder exists on that branch, catalog warnings, and installed CIPP capability; do not change the upload branch to fix reads |
+| Source shows no templates | The selected release branch is correct, `CATemplate` exists on that branch, CIPP shows the source warnings, and the instance can read the repository; do not change the upload branch to fix reads |
 | Library saved but templates missing | Scheduler task state/results and selected source branch; a scheduled sync may not have run yet |
 | Deployment reports an unresolved variable/name | All eight Lists exist, tenant overrides are correct, display names are unique, and emergency references resolve |
 | CA-006 has no target users/groups | Keep it undeployed while compatibility is unused; do not broaden it to All users |
@@ -288,19 +330,16 @@ clients, embedded views, browser redirection, bootstrap/enrollment, fresh tokens
 PIM activation, and cross-tenant MFA trust need tenant testing. Inventory existing
 legacy-auth/EAS blocks; no new legacy-auth policy is included or authorized.
 
-## Authoritative format evidence
+## CIPP documentation and policy evidence
 
-Reviewed 2026-11-13. CIPP API source is pinned to commit
-`c73aeb87a2c71cba929f17ea6d21a7e166288e7b`; this is source evidence, **not** a
-claim that a target CIPP instance runs this version.
+The integration workflow is based on the public CIPP documentation, not on CIPP
+application source code:
 
 | Evidence | What it establishes |
 | --- | --- |
-| [CIPP raw CA example](https://github.com/KelvinTegelaar/CIPP-API/blob/c73aeb87a2c71cba929f17ea6d21a7e166288e7b/Config/49a8069e-3b46-4680-a035-9250bc675446.CATemplate.json) | Raw policy object with `displayName`, `state`, `conditions`, `grantControls`; no invented envelope |
-| [Catalog discovery](https://github.com/KelvinTegelaar/CIPP-API/blob/c73aeb87a2c71cba929f17ea6d21a7e166288e7b/Modules/CIPPHTTP/Public/Entrypoints/HTTP%20Functions/Tools/GitHub/Invoke-ListCommunityRepoTemplates.ps1) | Top-level `CATemplate` folder identifies template type |
-| [Community importer](https://github.com/KelvinTegelaar/CIPP-API/blob/c73aeb87a2c71cba929f17ea6d21a7e166288e7b/Modules/CIPPCore/Public/Tools/Import-CommunityTemplate.ps1) | Raw `@odata.type` containing `conditionalAccessPolicy` imports into the CA template store; table envelopes are another format, not needed here |
-| [Template exporter](https://github.com/KelvinTegelaar/CIPP-API/blob/c73aeb87a2c71cba929f17ea6d21a7e166288e7b/Modules/CIPPCore/Public/New-CIPPCATemplate.ps1) | Converts tenant users/groups to display-name references and preserves policy fields |
-| [Deployment implementation](https://github.com/KelvinTegelaar/CIPP-API/blob/c73aeb87a2c71cba929f17ea6d21a7e166288e7b/Modules/CIPPCore/Public/New-CIPPCAPolicy.ps1) | Variable substitution, reserved `Office365` keyword preservation, name/strength resolution; strength object becomes `{id}` for Graph |
+| [CIPP Catalog](https://docs.cipp.app/user-documentation/tools/community-repos) | Register an existing repository, folder-based template type discovery, public/private repository access |
+| [CIPP Template Library](https://docs.cipp.app/user-documentation/tools/templatelib) | Selected branch, all files on a repository branch, seven-day sync, overwrite warning, required permissions and Scheduler behavior |
+| [CIPP CA Policies](https://docs.cipp.app/user-documentation/tenant/conditional/list-policies) | Target tenant, explicit policy state, Replace by display name, missing-group behavior, exclusions, overwrite, and review/edit operations |
 | [CIPP template editor documentation](https://docs.cipp.app/user-documentation/tenant/conditional/list-template/create-ca-template) | List tokens in user/group arrays, empty Lists, name resolution, device filters, strengths, external targeting |
 | [CIPP template/catalog documentation](https://docs.cipp.app/user-documentation/tenant/conditional/list-template) | Catalog import, cloning, package tags, and repository sync |
 | [Microsoft built-in strengths](https://learn.microsoft.com/en-us/graph/api/authenticationstrengthroot-list-policies?view=graph-rest-1.0) | `...0002` = Multifactor authentication; `...0004` = Phishing resistant MFA (`...0003` is Passwordless MFA, not phishing-resistant) |

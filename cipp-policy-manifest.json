@@ -1,0 +1,222 @@
+{
+  "schemaVersion": 2,
+  "kind": "cipp-conditional-access-catalog",
+  "catalogId": "cipp-ca-baseline-v1",
+  "templateRoot": "CATemplate",
+  "sourceTemplateFormat": "raw-cipp-conditional-access-template",
+  "sourceContract": {
+    "repository": "therealtadda/CIPP-Policy-Templates",
+    "revisionType": "git-commit-sha",
+    "revisionRequired": true,
+    "branchNamesAreDiscoveryHintsOnly": true,
+    "digestAlgorithm": "sha256"
+  },
+  "discovery": {
+    "entryPoint": "scripts/Get-CIPPCatalog.ps1",
+    "policyPattern": "*.json",
+    "ordering": "id-ascending"
+  },
+  "compatibility": {
+    "unknownContractVersion": "reject",
+    "minimumCippCapabilities": [
+      "raw-conditional-access-template-import",
+      "list-variable-expansion",
+      "empty-list-removal",
+      "device-filters",
+      "external-user-targeting",
+      "authentication-strength-resolution"
+    ]
+  },
+  "deploymentContract": {
+    "repositoryPerformsTenantOperations": false,
+    "defaultAction": "discover-and-validate-only",
+    "requiresExplicitTenantAuthorization": true,
+    "sourceTemplateIsGraphPayload": false,
+    "createOrUpdateState": "disabled",
+    "activationState": "enabledForReportingButNotEnforced",
+    "activationRequiresSeparateExplicitStep": true,
+    "requiresReplaceByDisplayName": true,
+    "requiresPrecreatedObjects": true,
+    "createOrUpdateSteps": [
+      "validate-reader-output",
+      "resolve-tenant-references",
+      "generate-cipp-deployment-input",
+      "force-disabled-state",
+      "create-or-update"
+    ],
+    "activationSteps": [
+      "verify-created-or-updated-policy-digest-and-scope",
+      "verify-disabled-state",
+      "check-all-activation-gates",
+      "apply-report-only-state-in-separate-operation"
+    ],
+    "prohibitedActions": [
+      "remove-all-exclusions",
+      "apply-all-users-as-error-recovery",
+      "automatic-group-creation",
+      "automatic-policy-enforcement",
+      "blind-tenant-wide-deployment"
+    ]
+  },
+  "variables": [
+    {
+      "token": "%caemergencyusers%",
+      "cippType": "List",
+      "objectKind": "user",
+      "required": true
+    },
+    {
+      "token": "%camfaexceptions%",
+      "cippType": "List",
+      "objectKind": "group",
+      "required": false
+    },
+    {
+      "token": "%caprivilegedexceptions%",
+      "cippType": "List",
+      "objectKind": "group",
+      "required": false
+    },
+    {
+      "token": "%cawindowsexceptions%",
+      "cippType": "List",
+      "objectKind": "group",
+      "required": false
+    },
+    {
+      "token": "%camobileexceptions%",
+      "cippType": "List",
+      "objectKind": "group",
+      "required": false
+    },
+    {
+      "token": "%caplatformexceptions%",
+      "cippType": "List",
+      "objectKind": "group",
+      "required": false
+    },
+    {
+      "token": "%caprivilegedusers%",
+      "cippType": "List",
+      "objectKind": "group",
+      "required": false
+    },
+    {
+      "token": "%caexternalcompatibility%",
+      "cippType": "List",
+      "objectKind": "group",
+      "required": false
+    }
+  ],
+  "policies": [
+    {
+      "id": "CA-001",
+      "path": "CATemplate/CA-001-Baseline-MFA-strength.json",
+      "displayName": "CA-001 - Baseline - Require MFA strength",
+      "sha256": "0A98A219A598458BF3BBF5574BAB8152F533C8464188ACFC175F572D2F98C485",
+      "optional": false,
+      "selectionSet": "baseline-core",
+      "variables": [
+        "%caemergencyusers%",
+        "%camfaexceptions%",
+        "%caexternalcompatibility%"
+      ]
+    },
+    {
+      "id": "CA-002",
+      "path": "CATemplate/CA-002-Privileged-phishing-resistant-strength.json",
+      "displayName": "CA-002 - Privileged - Require phishing-resistant strength",
+      "sha256": "8E9E8D797FB13C17A77EA2190673775F5768A9FF7E3C7E40D30DAE965512CFBB",
+      "optional": false,
+      "selectionSet": "baseline-core",
+      "variables": [
+        "%caemergencyusers%",
+        "%caprivilegedexceptions%",
+        "%caprivilegedusers%"
+      ]
+    },
+    {
+      "id": "CA-003",
+      "path": "CATemplate/CA-003-Windows-block-non-Entra-joined.json",
+      "displayName": "CA-003 - Windows - Block non-Entra-joined devices",
+      "sha256": "2480E5AB7B3CD9B01D0CBA53F4A4DF502493FB1F63717F2FDF00DBD07E4933D7",
+      "optional": false,
+      "selectionSet": "baseline-core",
+      "variables": [
+        "%caemergencyusers%",
+        "%cawindowsexceptions%"
+      ]
+    },
+    {
+      "id": "CA-004",
+      "path": "CATemplate/CA-004-Mobile-app-protection.json",
+      "displayName": "CA-004 - Mobile - Require app protection",
+      "sha256": "678BCAFE406BFAD4793ECC170F97705E87D71F472ADD4642773835575E0B529F",
+      "optional": false,
+      "selectionSet": "baseline-core",
+      "variables": [
+        "%caemergencyusers%",
+        "%camobileexceptions%"
+      ]
+    },
+    {
+      "id": "CA-005",
+      "path": "CATemplate/CA-005-Platforms-block-unsupported.json",
+      "displayName": "CA-005 - Platforms - Block unsupported platforms",
+      "sha256": "01A4DEE460A9BA9AFC5C90C23A8DEA19859CB529EE0123941E73C10EDD5CFD4B",
+      "optional": false,
+      "selectionSet": "baseline-core",
+      "variables": [
+        "%caemergencyusers%",
+        "%caplatformexceptions%"
+      ]
+    },
+    {
+      "id": "CA-006",
+      "path": "CATemplate/CA-006-External-MFA-compatibility.json",
+      "displayName": "CA-006 - External - MFA compatibility",
+      "sha256": "900FD5FF29F246C40797DE3581744DE992B9A902619623131A9E366A2396C1A9",
+      "optional": true,
+      "selectionSet": "external-compatibility",
+      "variables": [
+        "%caemergencyusers%",
+        "%caexternalcompatibility%"
+      ]
+    }
+  ],
+  "selectionSets": [
+    {
+      "id": "baseline-core",
+      "policyIds": [
+        "CA-001",
+        "CA-002",
+        "CA-003",
+        "CA-004",
+        "CA-005"
+      ],
+      "recommendedForInitialSelection": true,
+      "activationGates": [
+        "all-cipp-capabilities-confirmed",
+        "tenant-references-resolved-uniquely",
+        "report-only-round-trip-reviewed",
+        "separate-tenant-authorization"
+      ]
+    },
+    {
+      "id": "external-compatibility",
+      "policyIds": [
+        "CA-006"
+      ],
+      "recommendedForInitialSelection": false,
+      "pairedWith": [
+        "CA-001"
+      ],
+      "activationGates": [
+        "exact-incompatible-external-scope-approved",
+        "replacement-mfa-enforced-and-verified",
+        "paired-ca-001-exclusion-reviewed",
+        "separate-tenant-authorization"
+      ]
+    }
+  ]
+}
