@@ -2,14 +2,21 @@
 
 Reusable, CIPP-first Conditional Access templates for authentication assurance,
 cloud-only Entra-joined Windows access, and Intune app-protected mobile access.
-**Every template defaults to Report-only. Nothing in this repository deploys to a
-tenant. Enforced pilot and production readiness are blocked pending separately
-authorized tenant verification.**
+**Every template defaults to Report-only. No script deploys these policies.
+Enforced pilot and production readiness are blocked pending separately authorized
+tenant verification.** The optional [identity initializer](docs/tenant-initialization.md)
+does make tenant identity/permission changes when explicitly executed.
 
 To connect an existing CIPP instance, start with [Using this repository with
 CIPP](#using-this-repository-with-cipp). For tenant prerequisites, pilot acceptance
 criteria, and rollback, read the [deployment runbook](docs/deployment-runbook.md)
 before deploying anything.
+
+To prepare CIPP connection identities and consent, use
+[`scripts\Initialize-CIPPTenant.ps1`](docs/tenant-initialization.md). It supports
+direct and partner/SAM modes, optional resumable GDAP onboarding, and encrypted
+administrator credential exports. This is separate from template import and does
+not install CIPP or enable policies.
 
 ## Policy inventory
 
@@ -54,7 +61,7 @@ Run with PowerShell 7 or later, from this checkout:
 ```
 
 There are no package dependencies, tenant calls, or deployment commands in these
-scripts. Checks cover the deliberately supported CIPP/Graph schema subset,
+two offline validation scripts. Checks cover the deliberately supported CIPP/Graph schema subset,
 closed property sets, scope, controls, built-in strength/role IDs, emergency
 references, independent exceptions, and the CA-001/006 reference pairing.
 Regression tests mutate these properties and require rejection. This is not a

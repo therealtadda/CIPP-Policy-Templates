@@ -8,6 +8,12 @@ This baseline is a reviewable starting point, not a released production package.
 Use the five baseline templates independently or as a CIPP package. CA-006 is an
 optional, separately gated compatibility component.
 
+If CIPP connection identities/permissions do not yet exist, follow the separate
+[identity initialization runbook](tenant-initialization.md). Its initializer
+changes identities and grants only when explicitly invoked, exports credentials
+privately, and requires MFA/customer approval and CIPP onboarding checks.
+Completing it does not authorize or perform any policy import/deployment below.
+
 ## 1. Private preflight and release blockers
 
 Create a tenant-private change record, never in this repository. Assign an owner,
