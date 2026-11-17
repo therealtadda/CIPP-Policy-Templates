@@ -1,0 +1,22 @@
+{
+  "displayName": "AS-001 - Authenticator passkeys, WHfB and TAP",
+  "description": "Microsoft Authenticator passkeys (Android and iOS), Windows Hello for Business, or one-time and multi-use Temporary Access Pass. Bootstrap and recovery capable; not phishing-resistant-only.",
+  "allowedCombinations": [
+    "fido2",
+    "windowsHelloForBusiness",
+    "temporaryAccessPassOneTime",
+    "temporaryAccessPassMultiUse"
+  ],
+  "combinationConfigurations": [
+    {
+      "@odata.type": "#microsoft.graph.fido2CombinationConfiguration",
+      "appliesToCombinations": [
+        "fido2"
+      ],
+      "allowedAAGUIDs": [
+        "de1e552d-db1d-4423-a619-566b625cdc84",
+        "90a3ccdf-635c-4729-a248-9b709135078f"
+      ]
+    }
+  ]
+}
